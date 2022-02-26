@@ -1,6 +1,7 @@
 import os
 import cv2
 import mediapipe as mp
+import output
 
 mp_hands = mp.solutions.hands # 实例化Hands解决方案
 hand = mp_hands.Hands( # 实例化一个用于处理手部参数的图像处理器
@@ -10,6 +11,9 @@ hand = mp_hands.Hands( # 实例化一个用于处理手部参数的图像处理�
   min_tracking_confidence=0.6) # 追踪权重,权重越高追踪越准,但处理速度会降低
 
 cap = cv2.VideoCapture(0) # 占用视频流(相机) 为0为默认摄像头
+
+com = output.init('COM1', 115200)
+
 
 finger = [0,0,0,0,0,0]
 
@@ -34,7 +38,7 @@ while cap.isOpened():
             yp = pow((results.multi_hand_landmarks[0].landmark[0].y - results.multi_hand_landmarks[0].landmark[(i*4) - 3].y),2)
             zp = pow((results.multi_hand_landmarks[0].landmark[0].z - results.multi_hand_landmarks[0].landmark[(i*4) - 3].z),2)
 
-            # 求出指尖坐标与指跟坐标距离 除以指根与第一指节的距离 减轻摄像头与手之间的距离变化造成的影响
+            # 求出指尖坐标与手腕坐标距离 除以指根与第一指节的距离 减轻摄像头与手之间的距离变化造成的影响
             dist = (pow((xraw + yraw + zraw), 0.5) / pow((xp + yp + zp), 0.5)) 
             
             # 补偿值，因个体差异 补偿值可能不同
@@ -51,8 +55,9 @@ while cap.isOpened():
                 dist = abs(dist - 0.6)
             if dist > 1:
                 dist = 1
-            finger[i] = round(dist, 2) # 放入finger中 (第0个为指跟坐标)
-        print(finger)
+            finger[i] = round(dist, 2) # 放入finger中 (第0个为手腕坐标)
+        
+        output.full_motor_action(com, finger[1:]) # 将动作发送至串口 不需要手腕坐标
 
 cap.release() # 解除摄像头占用
 
