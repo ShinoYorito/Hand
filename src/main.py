@@ -1,64 +1,179 @@
-import os
 import cv2
 import mediapipe as mp
+import math
+import serial
+import copy
 import output
 
-mp_hands = mp.solutions.hands # 实例化Hands解决方案
-hand = mp_hands.Hands( # 实例化一个用于处理手部参数的图像处理器
-  static_image_mode=False, # 静态帧模式,True为图片处理,False为视频流处理
-  max_num_hands=2, # 最大手部数量
-  min_detection_confidence=0.7, # 置信度,识别精准度随置信度提高,但识别率会随之降低
-  min_tracking_confidence=0.6) # 追踪权重,权重越高追踪越准,但处理速度会降低
+mp_drawing_styles = mp.solutions.drawing_styles
+com = output.init('COM2', 9600)
+def vector_2d_angle(v1, v2):
+    '''
+        求解二维向量的角度
+    '''
+    v1_x = v1[0]
+    v1_y = v1[1]
+    v2_x = v2[0]
+    v2_y = v2[1]
+    try:
+        angle_ = math.degrees(math.acos(
+            (v1_x * v2_x + v1_y * v2_y) / (((v1_x ** 2 + v1_y ** 2) ** 0.5) * ((v2_x ** 2 + v2_y ** 2) ** 0.5))))
+    except:
+        angle_ = 65535.
+    if angle_ > 180.:
+        angle_ = 65535.
+    return angle_
 
-cap = cv2.VideoCapture(0) # 占用视频流(相机) 为0为默认摄像头
 
-com = output.init('COM1', 115200)
+def hand_angle(hand_):
+    '''
+        获取对应手相关向量的二维角度,根据角度确定手势
+    '''
+    angle_list = []
+    # ---------------------------- thumb 大拇指角度
+    angle_ = vector_2d_angle(
+        ((int(hand_[0][0]) - int(hand_[2][0])), (int(hand_[0][1]) - int(hand_[2][1]))),
+        ((int(hand_[3][0]) - int(hand_[4][0])), (int(hand_[3][1]) - int(hand_[4][1])))
+    )
+    angle_list.append(angle_)
+    # ---------------------------- index 食指角度
+    angle_ = vector_2d_angle(
+        ((int(hand_[0][0]) - int(hand_[6][0])), (int(hand_[0][1]) - int(hand_[6][1]))),
+        ((int(hand_[7][0]) - int(hand_[8][0])), (int(hand_[7][1]) - int(hand_[8][1])))
+    )
+    angle_list.append(angle_)
+    # ---------------------------- middle 中指角度
+    angle_ = vector_2d_angle(
+        ((int(hand_[0][0]) - int(hand_[10][0])), (int(hand_[0][1]) - int(hand_[10][1]))),
+        ((int(hand_[11][0]) - int(hand_[12][0])), (int(hand_[11][1]) - int(hand_[12][1])))
+    )
+    angle_list.append(angle_)
+    # ---------------------------- ring 无名指角度
+    angle_ = vector_2d_angle(
+        ((int(hand_[0][0]) - int(hand_[14][0])), (int(hand_[0][1]) - int(hand_[14][1]))),
+        ((int(hand_[15][0]) - int(hand_[16][0])), (int(hand_[15][1]) - int(hand_[16][1])))
+    )
+    angle_list.append(angle_)
+    # ---------------------------- pink 小拇指角度
+    angle_ = vector_2d_angle(
+        ((int(hand_[0][0]) - int(hand_[18][0])), (int(hand_[0][1]) - int(hand_[18][1]))),
+        ((int(hand_[19][0]) - int(hand_[20][0])), (int(hand_[19][1]) - int(hand_[20][1])))
+    )
+    angle_list.append(angle_)
+    return angle_list
 
 
-finger = [0,0,0,0,0,0]
-
-while cap.isOpened():
-    success, frame = cap.read() # 读取camera内容
-    if not success:
-        print("ERROR: Open Camera Failed!")
-        continue
+def jiexian(num):
+    if num > 2000:
+        return 2000
+    elif num < 0:
+        return 0
     else:
-        cv2.flip(frame, 1)
-        results = hand.process(frame)
-        # print(results.multi_handedness)
-    if (results.multi_handedness != None):
-        for i in range(1,6):
-            # 指根与指尖的净距离
-            xraw = pow((results.multi_hand_landmarks[0].landmark[0].x - results.multi_hand_landmarks[0].landmark[i*4].x),2)
-            yraw = pow((results.multi_hand_landmarks[0].landmark[0].y - results.multi_hand_landmarks[0].landmark[i*4].y),2)
-            zraw = pow((results.multi_hand_landmarks[0].landmark[0].z - results.multi_hand_landmarks[0].landmark[i*4].z),2)
-            
-            # 指根与第一指节的距离 用于降低手与摄像头距离带来的影响
-            xp = pow((results.multi_hand_landmarks[0].landmark[0].x - results.multi_hand_landmarks[0].landmark[(i*4) - 3].x),2)
-            yp = pow((results.multi_hand_landmarks[0].landmark[0].y - results.multi_hand_landmarks[0].landmark[(i*4) - 3].y),2)
-            zp = pow((results.multi_hand_landmarks[0].landmark[0].z - results.multi_hand_landmarks[0].landmark[(i*4) - 3].z),2)
-
-            # 求出指尖坐标与手腕坐标距离 除以指根与第一指节的距离 减轻摄像头与手之间的距离变化造成的影响
-            dist = (pow((xraw + yraw + zraw), 0.5) / pow((xp + yp + zp), 0.5)) 
-            
-            # 补偿值，因个体差异 补偿值可能不同
-            # 拇指 - 2.5  食指 - 0.8  中指 - 0.6  无名指 - 0.6  尾指 - 0.6
-            if i == 1:
-                dist = abs(dist - 2.5)
-            elif i == 2:
-                dist = abs(dist - 0.8)
-            elif i == 3:
-                dist = abs(dist - 0.7)
-            elif i == 4:
-                dist = abs(dist - 0.6)
-            elif i == 5:
-                dist = abs(dist - 0.6)
-            if dist > 1:
-                dist = 1
-            finger[i] = round(dist, 2) # 放入finger中 (第0个为手腕坐标)
-        
-        output.full_motor_action(com, finger[1:]) # 将动作发送至串口 不需要手腕坐标
-
-cap.release() # 解除摄像头占用
+        return int(num)
 
 
+def hex_ten(str):
+    if '0' <= str <= '9':
+        return int(str)
+    elif str == 'a':
+        return 10
+    elif str == 'b':
+        return 11
+    elif str == 'c':
+        return 12
+    elif str == 'd':
+        return 13
+    elif str == 'e':
+        return 14
+    elif str == 'f':
+        return 15
+
+
+def h_gesture(angle_list):
+    '''
+        # 二维约束的方法定义手势
+        # fist five gun love one six three thumbup yeah
+    '''
+    thr_angle = 65.
+    thr_angle_thumb = 53.
+    thr_angle_s = 49.
+    gesture_str = None
+    if 65535. not in angle_list:
+        # print(angle_list)
+        hand_list = []
+        hand_list.append(jiexian(angle_list[0] * 20))
+        hand_list.append(jiexian(2000 - angle_list[1] * 12))
+        hand_list.append(jiexian(2000 - angle_list[2] * 12))
+        hand_list.append(jiexian(2000 - angle_list[3] * 12))
+        hand_list.append(jiexian(2000 - angle_list[4] * 12))
+        print(hand_list)
+        output.full_motor_action(com, hand_list)  # 将动作发送至串口 不需要手腕坐标
+
+        if (angle_list[0] > thr_angle_thumb) and (angle_list[1] > thr_angle) and (angle_list[2] > thr_angle) and (
+                angle_list[3] > thr_angle) and (angle_list[4] > thr_angle):
+            gesture_str = "fist"
+        elif (angle_list[0] < thr_angle_s) and (angle_list[1] < thr_angle_s) and (angle_list[2] < thr_angle_s) and (
+                angle_list[3] < thr_angle_s) and (angle_list[4] < thr_angle_s):
+            gesture_str = "five"
+        elif (angle_list[0] < thr_angle_s) and (angle_list[1] < thr_angle_s) and (angle_list[2] > thr_angle) and (
+                angle_list[3] > thr_angle) and (angle_list[4] > thr_angle):
+            gesture_str = "gun"
+        elif (angle_list[0] < thr_angle_s) and (angle_list[1] < thr_angle_s) and (angle_list[2] > thr_angle) and (
+                angle_list[3] > thr_angle) and (angle_list[4] < thr_angle_s):
+            gesture_str = "love"
+        elif (angle_list[0] > 5) and (angle_list[1] < thr_angle_s) and (angle_list[2] > thr_angle) and (
+                angle_list[3] > thr_angle) and (angle_list[4] > thr_angle):
+            gesture_str = "one"
+        elif (angle_list[0] < thr_angle_s) and (angle_list[1] > thr_angle) and (angle_list[2] > thr_angle) and (
+                angle_list[3] > thr_angle) and (angle_list[4] < thr_angle_s):
+            gesture_str = "six"
+        elif (angle_list[0] > thr_angle_thumb) and (angle_list[1] < thr_angle_s) and (angle_list[2] < thr_angle_s) and (
+                angle_list[3] < thr_angle_s) and (angle_list[4] > thr_angle):
+            gesture_str = "three"
+        elif (angle_list[0] < thr_angle_s) and (angle_list[1] > thr_angle) and (angle_list[2] > thr_angle) and (
+                angle_list[3] > thr_angle) and (angle_list[4] > thr_angle):
+            gesture_str = "thumbUp"
+        elif (angle_list[0] > thr_angle_thumb) and (angle_list[1] < thr_angle_s) and (angle_list[2] < thr_angle_s) and (
+                angle_list[3] > thr_angle) and (angle_list[4] > thr_angle):
+            gesture_str = "two"
+    return gesture_str
+
+
+def detect():
+    mp_drawing = mp.solutions.drawing_utils
+    mp_hands = mp.solutions.hands
+    hands = mp_hands.Hands(
+        static_image_mode=False,
+        max_num_hands=1,
+        min_detection_confidence=0.75,
+        min_tracking_confidence=0.75)
+    cap = cv2.VideoCapture(0)
+    while True:
+        ret, frame = cap.read()
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame = cv2.flip(frame, 1)
+        results = hands.process(frame)
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
+        if results.multi_hand_landmarks:
+            for hand_landmarks in results.multi_hand_landmarks:
+                mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS,
+                                          mp_drawing_styles.get_default_hand_landmarks_style(),
+                                          mp_drawing_styles.get_default_hand_connections_style())
+                hand_local = []
+                for i in range(21):
+                    x = hand_landmarks.landmark[i].x * frame.shape[1]
+                    y = hand_landmarks.landmark[i].y * frame.shape[0]
+                    hand_local.append((x, y))
+                if hand_local:
+                    angle_list = hand_angle(hand_local)
+                    gesture_str = h_gesture(angle_list)
+                    cv2.putText(frame, gesture_str, (0, 100), 0, 1.3, (0, 0, 255), 3)
+        cv2.imshow('MediaPipe Hands', frame)
+        if cv2.waitKey(1) & 0xFF == 27:
+            break
+    cap.release()
+
+
+if __name__ == '__main__':
+    detect()

@@ -18,7 +18,7 @@ def protoco(ctx, head = [0x55, 0x55], act = [0x03], time = 0):
     # 构建报文内容
     for item in ctx.keys():
         tail.append(int(item)) # 放入需要控制的舵机ID
-        arg = int(ctx[item] * 2000) # 获得报文角度 (0~1)->(0~180°)
+        arg = int(ctx[item]) # 获得报文角度 (0~1)->(0~180°)
         arg = [arg & 0x00ff, (arg & 0xff00) >> 8] # 按协议存放报文
         tail = tail + arg # 放入对应舵机的动作角度
     
