@@ -1,79 +1,14 @@
 import math
+import output
 import threading
 import mediapipe as mp
 from PySide2.QtWidgets import QApplication, QMessageBox
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtGui import *
-import cv2 as cv
+import cv2
 import numpy as np
-mp_drawing_styles = mp.solutions.drawing_styles
-
-uipath = "src\sysui.ui"
-def thread_runner(func):
-    """多线程装饰器"""
-
-    def wrapper(*args, **kw):
-        print(f'Start new thread: {func.__name__}')
-        threading.Thread(target=func, args=args, kwargs=kw).start()
-
-    return wrapper
 
 
-def jiexian(num):
-    if num > 2000:
-        return 2000
-    elif num < 0:
-        return 0
-    else:
-        return int(num)
-def h_gesture(angle_list):
-    '''
-        # 二维约束的方法定义手势
-        # fist five gun love one six three thumbup yeah
-    '''
-    thr_angle = 65.
-    thr_angle_thumb = 53.
-    thr_angle_s = 49.
-    gesture_str = None
-    if 65535. not in angle_list:
-        # print(angle_list)
-        hand_list = []
-        hand_list.append(jiexian(angle_list[0] * 20))
-        hand_list.append(jiexian(2000 - angle_list[1] * 12))
-        hand_list.append(jiexian(2000 - angle_list[2] * 12))
-        hand_list.append(jiexian(2000 - angle_list[3] * 12))
-        hand_list.append(jiexian(2000 - angle_list[4] * 12))
-        print(hand_list)
-        #output.full_motor_action(com, hand_list)  # 将动作发送至串口 不需要手腕坐标
-
-        if (angle_list[0] > thr_angle_thumb) and (angle_list[1] > thr_angle) and (angle_list[2] > thr_angle) and (
-                angle_list[3] > thr_angle) and (angle_list[4] > thr_angle):
-            gesture_str = "fist"
-        elif (angle_list[0] < thr_angle_s) and (angle_list[1] < thr_angle_s) and (angle_list[2] < thr_angle_s) and (
-                angle_list[3] < thr_angle_s) and (angle_list[4] < thr_angle_s):
-            gesture_str = "five"
-        elif (angle_list[0] < thr_angle_s) and (angle_list[1] < thr_angle_s) and (angle_list[2] > thr_angle) and (
-                angle_list[3] > thr_angle) and (angle_list[4] > thr_angle):
-            gesture_str = "gun"
-        elif (angle_list[0] < thr_angle_s) and (angle_list[1] < thr_angle_s) and (angle_list[2] > thr_angle) and (
-                angle_list[3] > thr_angle) and (angle_list[4] < thr_angle_s):
-            gesture_str = "love"
-        elif (angle_list[0] > 5) and (angle_list[1] < thr_angle_s) and (angle_list[2] > thr_angle) and (
-                angle_list[3] > thr_angle) and (angle_list[4] > thr_angle):
-            gesture_str = "one"
-        elif (angle_list[0] < thr_angle_s) and (angle_list[1] > thr_angle) and (angle_list[2] > thr_angle) and (
-                angle_list[3] > thr_angle) and (angle_list[4] < thr_angle_s):
-            gesture_str = "six"
-        elif (angle_list[0] > thr_angle_thumb) and (angle_list[1] < thr_angle_s) and (angle_list[2] < thr_angle_s) and (
-                angle_list[3] < thr_angle_s) and (angle_list[4] > thr_angle):
-            gesture_str = "three"
-        elif (angle_list[0] < thr_angle_s) and (angle_list[1] > thr_angle) and (angle_list[2] > thr_angle) and (
-                angle_list[3] > thr_angle) and (angle_list[4] > thr_angle):
-            gesture_str = "thumbUp"
-        elif (angle_list[0] > thr_angle_thumb) and (angle_list[1] < thr_angle_s) and (angle_list[2] < thr_angle_s) and (
-                angle_list[3] > thr_angle) and (angle_list[4] > thr_angle):
-            gesture_str = "two"
-    return gesture_str
 def vector_2d_angle(v1, v2):
     '''
         求解二维向量的角度
@@ -128,7 +63,123 @@ def hand_angle(hand_):
     angle_list.append(angle_)
     return angle_list
 
+def jiexian(num):
+    if num > 2000:
+        return 2000
+    elif num < 900:
+        return 900
+    else:
+        return int(num)
+
+def hex_ten(str):
+    if '0' <= str <= '9':
+        return int(str)
+    elif str == 'a':
+        return 10
+    elif str == 'b':
+        return 11
+    elif str == 'c':
+        return 12
+    elif str == 'd':
+        return 13
+    elif str == 'e':
+        return 14
+    elif str == 'f':
+        return 15
+
+def h_gesture(angle_list):
+    '''
+        # 二维约束的方法定义手势
+        # fist five gun love one six three thumbup yeah
+    '''
+    thr_angle = 65.
+    thr_angle_thumb = 53.
+    thr_angle_s = 49.
+    gesture_str = None
+    if 65535. not in angle_list:
+        # print(angle_list)
+        hand_list = []
+        hand_list.append(jiexian(angle_list[0] * 20))
+        hand_list.append(jiexian(2000 - angle_list[1] * 12))
+        hand_list.append(jiexian(2000 - angle_list[2] * 12))
+        hand_list.append(jiexian(2000 - angle_list[3] * 12))
+        hand_list.append(jiexian(2000 - angle_list[4] * 12))
+        # print(hand_list)
+        output.full_motor_action(com, hand_list)  # 将动作发送至串口 不需要手腕坐标
+
+        if (angle_list[0] > thr_angle_thumb) and (angle_list[1] > thr_angle) and (angle_list[2] > thr_angle) and (
+                angle_list[3] > thr_angle) and (angle_list[4] > thr_angle):
+            gesture_str = "拳头"
+        elif (angle_list[0] < thr_angle_s) and (angle_list[1] < thr_angle_s) and (angle_list[2] < thr_angle_s) and (
+                angle_list[3] < thr_angle_s) and (angle_list[4] < thr_angle_s):
+            gesture_str = "五|布"
+        elif (angle_list[0] < thr_angle_s) and (angle_list[1] < thr_angle_s) and (angle_list[2] > thr_angle) and (
+                angle_list[3] > thr_angle) and (angle_list[4] > thr_angle):
+            gesture_str = "八|手枪"
+        elif (angle_list[0] < thr_angle_s) and (angle_list[1] < thr_angle_s) and (angle_list[2] > thr_angle) and (
+                angle_list[3] > thr_angle) and (angle_list[4] < thr_angle_s):
+            gesture_str = "比心"
+        elif (angle_list[0] > 5) and (angle_list[1] < thr_angle_s) and (angle_list[2] > thr_angle) and (
+                angle_list[3] > thr_angle) and (angle_list[4] > thr_angle):
+            gesture_str = "一"
+        elif (angle_list[0] < thr_angle_s) and (angle_list[1] > thr_angle) and (angle_list[2] > thr_angle) and (
+                angle_list[3] > thr_angle) and (angle_list[4] < thr_angle_s):
+            gesture_str = "六"
+        elif (angle_list[0] > thr_angle_thumb) and (angle_list[1] < thr_angle_s) and (angle_list[2] < thr_angle_s) and (
+                angle_list[3] < thr_angle_s) and (angle_list[4] > thr_angle):
+            gesture_str = "三"
+        elif (angle_list[0] > thr_angle_thumb) and (angle_list[1] < thr_angle_s) and (angle_list[2] < thr_angle_s) and (
+                angle_list[3] < thr_angle_s) and (angle_list[4] < thr_angle):
+            gesture_str = "四"
+        elif (angle_list[0] < thr_angle_s) and (angle_list[1] > thr_angle) and (angle_list[2] > thr_angle) and (
+                angle_list[3] > thr_angle) and (angle_list[4] > thr_angle):
+            gesture_str = "点赞"
+        elif (angle_list[0] > thr_angle_thumb) and (angle_list[1] < thr_angle_s) and (angle_list[2] < thr_angle_s) and (
+                angle_list[3] > thr_angle) and (angle_list[4] > thr_angle):
+            gesture_str = "二|剪刀"
+    return gesture_str
+
+
+def detect():
+    mp_drawing = mp.solutions.drawing_utils
+    mp_hands = mp.solutions.hands
+    hands = mp_hands.Hands(
+        static_image_mode=False,
+        max_num_hands=1,
+        min_detection_confidence=0.75,
+        min_tracking_confidence=0.75)
+    cap = cv2.VideoCapture(0)
+    gesture_str = 'None'
+    while True:
+        ret, frame = cap.read()
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame = cv2.flip(frame, 1)
+        results = hands.process(frame)
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
+        if results.multi_hand_landmarks:
+            for hand_landmarks in results.multi_hand_landmarks:
+                mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS,
+                                          mp_drawing_styles.get_default_hand_landmarks_style(),
+                                          mp_drawing_styles.get_default_hand_connections_style())
+                hand_local = []
+                for i in range(21):
+                    x = hand_landmarks.landmark[i].x * frame.shape[1]
+                    y = hand_landmarks.landmark[i].y * frame.shape[0]
+                    hand_local.append((x, y))
+                if hand_local:
+                    angle_list = hand_angle(hand_local)
+                    gesture_str = h_gesture(angle_list)
+        show = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
+        stats.gesture_Text(gesture_str)
+        stats.cam_Disp(frame)
+        if ~Stats.cam_status or cv2.waitKey(1) & 0xFF == 27:
+            break
+    cap.release()
+
 class Stats:
+    cam_status = 0
     def __init__(self):
         # 从文件中加载UI定义
         # 从 UI 定义中动态 创建一个相应的窗口对象
@@ -196,7 +247,6 @@ class Stats:
 
 #------------------------------下面是函数----------------------------------#
 
-
     # --------------------以下为手指选择功能逻辑------------------ #
     def xiaozhi_Check(self):
         if self.ui.xiaozhiCheck.isChecked() == True:
@@ -254,51 +304,19 @@ class Stats:
 
 
     def gesture_Text(self, shuruTXT):
-        self.ui.gestureText.setText(shuruTXT)
-        print("手势上屏文字显示为:" + shuruTXT)
+        if (shuruTXT):
+            self.ui.gestureText.setText(shuruTXT)
 
-    @thread_runner
     def cam_Button(self):
         # 显示摄像头画面
-        print("单击以 开始|结束 摄像头画面")
-        mp_drawing = mp.solutions.drawing_utils
-        mp_hands = mp.solutions.hands
-        hands = mp_hands.Hands(
-            static_image_mode=False,
-            max_num_hands=1,
-            min_detection_confidence=0.75,
-            min_tracking_confidence=0.75)
-        cap = cv.VideoCapture(0)
-        while True:
-            ret, frame = cap.read()
-            frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
-            frame = cv.flip(frame, 1)
-            results = hands.process(frame)
-            frame = cv.cvtColor(frame, cv.COLOR_RGB2BGR)
-
-            if results.multi_hand_landmarks:
-                for hand_landmarks in results.multi_hand_landmarks:
-                    mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS,
-                                              mp_drawing_styles.get_default_hand_landmarks_style(),
-                                              mp_drawing_styles.get_default_hand_connections_style())
-                    hand_local = []
-                    for i in range(21):
-                        x = hand_landmarks.landmark[i].x * frame.shape[1]
-                        y = hand_landmarks.landmark[i].y * frame.shape[0]
-                        hand_local.append((x, y))
-                    if hand_local:
-                        angle_list = hand_angle(hand_local)
-                        gesture_str = h_gesture(angle_list)
-                        cv.putText(frame, gesture_str, (0, 100), 0, 1.3, (0, 0, 255), 3)
-            show = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
-            frame = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
-            self.ui.camWindow.setPixmap(QPixmap.fromImage(frame))
-            if cv.waitKey(1) & 0xFF == 27:
-                break
-        
-
-
-
+        Stats.cam_status = ~Stats.cam_status # 线程控制开关
+        if (Stats.cam_status):
+            cam = threading.Thread(target = detect) # 创建子线程
+            cam.start()
+    
+    def cam_Disp(self, Frame = None):
+        if (Frame != None):
+            self.ui.camWindow.setPixmap(QPixmap.fromImage(Frame))
 
     def handconnect_Button(self):
         # 连接机械手掌
@@ -396,9 +414,14 @@ class Stats:
     # -----------------------以上为数字按键模块功能逻辑---------------------- #
 
 
-
-app = QApplication([])          # QApplication 提供了整个图形界面程序的底层管理功能
-stats = Stats()                 # 调用Stats这个类
-stats.gesture_Text("Testing")      # 测试上屏手势显示文字
-stats.ui.show()                 # 放在主窗口的控件，要能全部显示show在界面上
-app.exec_()                     # 进入QApplication的事件处理循环
+if __name__ == '__main__':
+    mp_drawing_styles = mp.solutions.drawing_styles
+    com = output.init('COM2', 9600)
+    Window_text = '单击以开始屏幕显示'
+    uipath = "src\sysui.ui"
+    
+    app = QApplication([])          # QApplication 提供了整个图形界面程序的底层管理功能
+    stats = Stats()                 # 调用Stats这个类
+    stats.gesture_Text(Window_text)      # 测试上屏手势显示文字
+    stats.ui.show()                 # 放在主窗口的控件，要能全部显示show在界面上
+    app.exec_()                     # 进入QApplication的事件处理循环
