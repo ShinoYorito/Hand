@@ -72,15 +72,31 @@ def protoco(head = [0x55, 0x55], act = "exe", ctx = {1:900,2:900,3:900,4:900,5:9
 
 # 初始化一个串口, port为COM口号，baut为波特率
 def init(port, baut):
-    return serial.Serial(port, baut)
+    try:
+        result = serial.Serial(port, baut)
+        return result
+    except:
+        print("Error Port selected")
+        return -1
+
+def free(com):
+    try:
+        com.close()
+        return 0
+    except:
+        print("Error Port selected")
+        return -1
 
 # 以字符形式发送命令
 def send_cmd(dev, cmd): 
     print(cmd) # 打印日志 用于调试
-    if dev.isOpen():
+    try:
+        dev.isOpen()
         dev.write(bytes(cmd))# 将内容发送至串口
-    else:
-        print("Open device Fail")
+        return 0
+    except:
+        print("Com port is not open Yet!")
+        return -1
 
 # 用于实时手势识别使用的整体舵机运作命令
 def full_motor_action(com, finger_index):

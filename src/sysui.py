@@ -105,7 +105,8 @@ def h_gesture(angle_list):
         hand_list.append(jiexian(2000 - angle_list[3] * 12))
         hand_list.append(jiexian(2000 - angle_list[4] * 12))
         # print(hand_list)
-        output.full_motor_action(com, hand_list)  # 将动作发送至串口 不需要手腕坐标
+        if (stats.cam_cat_enable):
+            output.full_motor_action(stats.com, hand_list)  # 将动作发送至串口 不需要手腕坐标
 
         if (angle_list[0] > thr_angle_thumb) and (angle_list[1] > thr_angle) and (angle_list[2] > thr_angle) and (
                 angle_list[3] > thr_angle) and (angle_list[4] > thr_angle):
@@ -149,7 +150,7 @@ def detect():
         min_detection_confidence=0.75,
         min_tracking_confidence=0.75)
     cap = cv2.VideoCapture(0)
-    gesture_str = 'None'
+    gesture_str = '未定义的手势'
     while True:
         ret, frame = cap.read()
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -179,7 +180,10 @@ def detect():
     cap.release()
 
 class Stats:
-    cam_status = 0
+    cam_status = 0  # 摄像头模式开关
+    cam_cat_enable = 0 # 摄像头跟随模式开关
+    hand_enable = 0 # 手部功能总开关
+    com = None
     def __init__(self):
         # 从文件中加载UI定义
         # 从 UI 定义中动态 创建一个相应的窗口对象
@@ -244,6 +248,7 @@ class Stats:
         # 9个按键都连接到对应的函数
         # ------------------------以上为数字按键模块定义----------------- #
 
+        self.gesture_Text(Window_text)      # 初始化手势显示文字
 
 #------------------------------下面是函数----------------------------------#
 
@@ -283,23 +288,28 @@ class Stats:
     # --------------------以下为手指调节功能逻辑------------------ #
     def xiaozhi_Tiaojie(self):
         xiaozhi_jiaodu = self.ui.xiaozhiSlider.value()
-        print("小指调节程度为" + str(xiaozhi_jiaodu) + "%")
+        arg = (xiaozhi_jiaodu / 100) * (2000-900) # 将获取到的整形百分比 转为900~2000的有效值
+        output.send_cmd(self.com, output.protoco(ctx = {5:arg}))
 
     def wumingzhi_Tiaojie(self):
         wumingzhi_jiaodu = self.ui.wumingzhiSlider.value()
-        print("无名指调节程度为" + str(wumingzhi_jiaodu) + "%")
+        arg = (wumingzhi_jiaodu / 100) * (2000-900) # 将获取到的整形百分比 转为900~2000的有效值
+        output.send_cmd(self.com, output.protoco(ctx = {4:arg}))
 
     def zhongzhi_Tiaojie(self):
         zhongzhi_jiaodu = self.ui.zhongzhiSlider.value()
-        print("中指调节程度为" + str(zhongzhi_jiaodu) + "%")
+        arg = (zhongzhi_jiaodu / 100) * (2000-900) # 将获取到的整形百分比 转为900~2000的有效值
+        output.send_cmd(self.com, output.protoco(ctx = {3:arg}))
 
     def shizhi_Tiaojie(self):
         shizhi_jiaodu = self.ui.shizhiSlider.value()
-        print("食指调节程度为" + str(shizhi_jiaodu) + "%")
+        arg = (shizhi_jiaodu / 100) * (2000-900) # 将获取到的整形百分比 转为900~2000的有效值
+        output.send_cmd(self.com, output.protoco(ctx = {2:arg}))
 
     def muzhi_Tiaojie(self):
         muzhi_jiaodu = self.ui.muzhiSlider.value()
-        print("拇指调节程度为" + str(muzhi_jiaodu) + "%")
+        arg = (1 - (muzhi_jiaodu / 100)) * (2000-900) # 将获取到的整形百分比 转为900~2000的有效值 注意大拇指运作方向与其他四指相反
+        output.send_cmd(self.com, output.protoco(ctx = {1:arg}))
     # --------------------以上为手指调节功能逻辑------------------ #
 
 
@@ -318,13 +328,23 @@ class Stats:
         if (Frame != None):
             self.ui.camWindow.setPixmap(QPixmap.fromImage(Frame))
 
-    def handconnect_Button(self):
+    def handconnect_Button(self, port = 'COM4', baut = 9600):
         # 连接机械手掌
-        print("单击以 连接|断开 机械手掌")
+        Stats.hand_enable = ~Stats.hand_enable
+        if (Stats.hand_enable):
+            self.com = output.init(port, baut)
+            if (self.com == -1):
+                print("Failed to Open Com port")
+                Stats.hand_enable = ~Stats.hand_enable
+            return self.com
+        else:
+            output.free(self.com)
+            print("Com port Closed")
+            return 0
 
     def followmode_Choice(self):
         # 进入手势跟随模式
-        print("手势跟随模式已经打开了")
+        Stats.cam_cat_enable = ~Stats.cam_cat_enable
 
     def gamblemode_Choice(self):
         # 进入划拳模式
@@ -416,12 +436,10 @@ class Stats:
 
 if __name__ == '__main__':
     mp_drawing_styles = mp.solutions.drawing_styles
-    com = output.init('COM2', 9600)
     Window_text = '单击以开始屏幕显示'
     uipath = "src\sysui.ui"
     
     app = QApplication([])          # QApplication 提供了整个图形界面程序的底层管理功能
     stats = Stats()                 # 调用Stats这个类
-    stats.gesture_Text(Window_text)      # 测试上屏手势显示文字
     stats.ui.show()                 # 放在主窗口的控件，要能全部显示show在界面上
     app.exec_()                     # 进入QApplication的事件处理循环
