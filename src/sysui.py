@@ -104,10 +104,6 @@ def h_gesture(angle_list):
         hand_list.append(jiexian(2000 - angle_list[2] * 12))
         hand_list.append(jiexian(2000 - angle_list[3] * 12))
         hand_list.append(jiexian(2000 - angle_list[4] * 12))
-        # print(hand_list)
-        if (stats.cam_cat_enable):
-            output.full_motor_action(stats.com, hand_list)  # 将动作发送至串口 不需要手腕坐标
-
         if (angle_list[0] > thr_angle_thumb) and (angle_list[1] > thr_angle) and (angle_list[2] > thr_angle) and (
                 angle_list[3] > thr_angle) and (angle_list[4] > thr_angle):
             gesture_str = "拳头"
@@ -138,6 +134,12 @@ def h_gesture(angle_list):
         elif (angle_list[0] > thr_angle_thumb) and (angle_list[1] < thr_angle_s) and (angle_list[2] < thr_angle_s) and (
                 angle_list[3] > thr_angle) and (angle_list[4] > thr_angle):
             gesture_str = "二|剪刀"
+        
+        # print(hand_list)
+        if (stats.working_mode == 2):  # 跟随模式
+            output.full_motor_action(stats.com, hand_list)  # 将动作发送至串口 不需要手腕坐标
+        elif(stats.working_mode == 3):  # 猜拳模式
+            print("Enterd Gamble Mode")
     return gesture_str
 
 
@@ -181,7 +183,7 @@ def detect():
 
 class Stats:
     cam_status = 0  # 摄像头模式开关
-    cam_cat_enable = 0 # 摄像头跟随模式开关
+    working_mode = 0 # 设备运行模式 0为清空,1为数字手势,2为手部跟随,3为划拳,4为动作录制
     hand_enable = 0 # 手部功能总开关
     com = None
     def __init__(self):
@@ -288,27 +290,27 @@ class Stats:
     # --------------------以下为手指调节功能逻辑------------------ #
     def xiaozhi_Tiaojie(self):
         xiaozhi_jiaodu = self.ui.xiaozhiSlider.value()
-        arg = (xiaozhi_jiaodu / 100) * (2000-900) # 将获取到的整形百分比 转为900~2000的有效值
+        arg = 900 + (xiaozhi_jiaodu * 11) # 将获取到的整形百分比 转为900~2000的有效值
         output.send_cmd(self.com, output.protoco(ctx = {5:arg}))
 
     def wumingzhi_Tiaojie(self):
         wumingzhi_jiaodu = self.ui.wumingzhiSlider.value()
-        arg = (wumingzhi_jiaodu / 100) * (2000-900) # 将获取到的整形百分比 转为900~2000的有效值
+        arg = 900 + (wumingzhi_jiaodu * 11) # 将获取到的整形百分比 转为900~2000的有效值
         output.send_cmd(self.com, output.protoco(ctx = {4:arg}))
 
     def zhongzhi_Tiaojie(self):
         zhongzhi_jiaodu = self.ui.zhongzhiSlider.value()
-        arg = (zhongzhi_jiaodu / 100) * (2000-900) # 将获取到的整形百分比 转为900~2000的有效值
+        arg = 900 + (zhongzhi_jiaodu * 11) # 将获取到的整形百分比 转为900~2000的有效值
         output.send_cmd(self.com, output.protoco(ctx = {3:arg}))
 
     def shizhi_Tiaojie(self):
         shizhi_jiaodu = self.ui.shizhiSlider.value()
-        arg = (shizhi_jiaodu / 100) * (2000-900) # 将获取到的整形百分比 转为900~2000的有效值
+        arg = 900 + (shizhi_jiaodu * 11) # 将获取到的整形百分比 转为900~2000的有效值
         output.send_cmd(self.com, output.protoco(ctx = {2:arg}))
 
     def muzhi_Tiaojie(self):
         muzhi_jiaodu = self.ui.muzhiSlider.value()
-        arg = (1 - (muzhi_jiaodu / 100)) * (2000-900) # 将获取到的整形百分比 转为900~2000的有效值 注意大拇指运作方向与其他四指相反
+        arg = 2000 - (muzhi_jiaodu * 11) # 将获取到的整形百分比 转为900~2000的有效值 注意大拇指运作方向与其他四指相反
         output.send_cmd(self.com, output.protoco(ctx = {1:arg}))
     # --------------------以上为手指调节功能逻辑------------------ #
 
@@ -329,26 +331,44 @@ class Stats:
             self.ui.camWindow.setPixmap(QPixmap.fromImage(Frame))
 
     def handconnect_Button(self, port = 'COM4', baut = 9600):
-        # 连接机械手掌
         Stats.hand_enable = ~Stats.hand_enable
+        arr_red = '''color: black; background-color: rgb(240, 128, 128)'''
+        arr_green = '''color: black; background-color: rgb(152, 251, 152)'''
+        # 连接机械手掌
         if (Stats.hand_enable):
             self.com = output.init(port, baut)
             if (self.com == -1):
                 print("Failed to Open Com port")
                 Stats.hand_enable = ~Stats.hand_enable
-            return self.com
+                self.ui.xiaozhiState.setStyleSheet(arr_red)
+                self.ui.wumingzhiState.setStyleSheet(arr_red)
+                self.ui.zhongzhiState.setStyleSheet(arr_red)
+                self.ui.shizhiState.setStyleSheet(arr_red)
+                self.ui.muzhiState.setStyleSheet(arr_red)
+            else:
+                self.ui.xiaozhiState.setStyleSheet(arr_green)
+                self.ui.wumingzhiState.setStyleSheet(arr_green)
+                self.ui.zhongzhiState.setStyleSheet(arr_green)
+                self.ui.shizhiState.setStyleSheet(arr_green)
+                self.ui.muzhiState.setStyleSheet(arr_green)
+                return self.com
         else:
             output.free(self.com)
             print("Com port Closed")
+            self.ui.xiaozhiState.setStyleSheet(arr_red)
+            self.ui.wumingzhiState.setStyleSheet(arr_red)
+            self.ui.zhongzhiState.setStyleSheet(arr_red)
+            self.ui.shizhiState.setStyleSheet(arr_red)
+            self.ui.muzhiState.setStyleSheet(arr_red)
             return 0
 
     def followmode_Choice(self):
         # 进入手势跟随模式
-        Stats.cam_cat_enable = ~Stats.cam_cat_enable
+        self.working_mode = 2
 
     def gamblemode_Choice(self):
         # 进入划拳模式
-        print("人机猜拳模式已经打开了")
+        self.working_mode = 3
         self.ui.youwinBox.setEnabled(1)
         # 语音播报可以选择了
 
@@ -358,18 +378,19 @@ class Stats:
             self.ui.youwinBox.setEnabled(self.ui.gamblemodeChoice.isChecked())
         # 语音播报的选择状态跟随划拳按钮
         else:
-            print("先开划拳模式")
+            print("没有进入划拳模式")
             self.ui.youwinBox.setEnabled(0)  # 不能按
 
     def onemore_Thing(self):
         # 清空所有模式
         print("清空所有模式")
+        self.working_mode = 0
 
 
     # -----------------------以下为数字按键模块功能逻辑---------------------- #
     def numbermode_Choice(self):
         # 进入数字手势模式
-        print("数字手势模式已经打开了")
+        self.working_mode = 1
 
 
     def num0_Button(self):
