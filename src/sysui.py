@@ -235,7 +235,7 @@ def detect():
                                 playsound("src/draw.mp3")
                             
                             # 手部归位
-                            output.send_cmd(stats.com, output.protoco(act="run",idx=0))
+                            output.send_cmd(stats.com, output.protoco(act="exe", ctx = {1:1500,2:1500,3:1500,4:1500,5:1500}))
                     else:
                         # 绘制倒计时
                         cv2.putText(frame, str(stats.dtime-2), (130, 410), 0,15, (255, 255, 0), 15)
@@ -243,7 +243,7 @@ def detect():
                     print("Enterd Gamble Mode")
 
                     # 手部动作归位
-                    output.send_cmd(stats.com, output.protoco(act="run",idx=0))
+                    output.send_cmd(stats.com, output.protoco(act="exe", ctx = {1:1500,2:1500,3:1500,4:1500,5:1500}))
                     stats.dtime = 5 # sec
 
                     # 随机生成一个动作
