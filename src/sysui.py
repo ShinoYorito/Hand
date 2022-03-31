@@ -7,6 +7,7 @@ from PySide2.QtUiTools import QUiLoader
 from PySide2.QtGui import *
 import cv2
 import numpy as np
+import time
 
 
 def vector_2d_angle(v1, v2):
@@ -87,6 +88,12 @@ def hex_ten(str):
     elif str == 'f':
         return 15
 
+def timer():
+    while(stats.dtime):
+        time.sleep(1)
+        stats.dtime = stats.dtime - 1
+    stats.denable = ~stats.denable
+    
 def h_gesture(angle_list):
     '''
         # 二维约束的方法定义手势
@@ -138,8 +145,6 @@ def h_gesture(angle_list):
         # print(hand_list)
         if (stats.working_mode == 2):  # 跟随模式
             output.full_motor_action(stats.com, hand_list)  # 将动作发送至串口 不需要手腕坐标
-        elif(stats.working_mode == 3):  # 猜拳模式
-            print("Enterd Gamble Mode")
     return gesture_str
 
 
@@ -173,6 +178,15 @@ def detect():
                 if hand_local:
                     angle_list = hand_angle(hand_local)
                     gesture_str = h_gesture(angle_list)
+        if (stats.working_mode == 3):# 猜拳模式
+            if (stats.denable):
+                if (stats.dtime):
+                    cv2.putText(frame, str(stats.dtime), (0, 100), 0, 1.3, (0, 0, 255), 3)
+                else:
+                    print("Enterd Gamble Mode")
+                    stats.dtime = 3 # sec
+                    gbl = threading.Thread(target=timer)
+                    gbl.start()
         show = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame = QImage(show.data, show.shape[1], show.shape[0], QImage.Format_RGB888)
         stats.gesture_Text(gesture_str)
@@ -185,6 +199,8 @@ class Stats:
     cam_status = 0  # 摄像头模式开关
     working_mode = 0 # 设备运行模式 0为清空,1为数字手势,2为手部跟随,3为划拳,4为动作录制
     hand_enable = 0 # 手部功能总开关
+    dtime = 0 # 猜拳模式计时器
+    denable = 0 # 猜拳模式开关 按下后打开     
     com = None
     def __init__(self):
         # 从文件中加载UI定义
@@ -369,6 +385,7 @@ class Stats:
     def gamblemode_Choice(self):
         # 进入划拳模式
         self.working_mode = 3
+        self.denable = ~self.denable
         self.ui.youwinBox.setEnabled(1)
         # 语音播报可以选择了
 
@@ -459,7 +476,6 @@ if __name__ == '__main__':
     mp_drawing_styles = mp.solutions.drawing_styles
     Window_text = '单击以开始屏幕显示'
     uipath = "src\sysui.ui"
-    
     app = QApplication([])          # QApplication 提供了整个图形界面程序的底层管理功能
     stats = Stats()                 # 调用Stats这个类
     stats.ui.show()                 # 放在主窗口的控件，要能全部显示show在界面上
