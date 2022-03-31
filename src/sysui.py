@@ -216,12 +216,13 @@ def detect():
                     elif stats.dtime == 1:
                         idx = cmp(gesture_str)
                         print("act = ", stats.act, "gets = ", gesture_str, "result :",idx)
-                        if (idx > 0):
-                            playsound("src/win.mp3")
-                        elif (idx < 0):
-                            playsound("src/lose.mp3")
-                        elif (idx == 0):
-                            playsound("src/draw.mp3")
+                        if (stats.spken):
+                            if (idx > 0):
+                                playsound("src/win.mp3")
+                            elif (idx < 0):
+                                playsound("src/lose.mp3")
+                            elif (idx == 0):
+                                playsound("src/draw.mp3")
                     else:
                         cv2.putText(frame, str(stats.dtime-2), (130, 410), 0,15, (255, 255, 0), 15)
                 else:
