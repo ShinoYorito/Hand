@@ -2,7 +2,7 @@ import math
 import output
 import threading
 import mediapipe as mp
-from PySide2.QtWidgets import QApplication, QMessageBox
+from PySide2.QtWidgets import QApplication, QMessageBox,QMainWindow
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtGui import *
 import cv2
@@ -11,6 +11,14 @@ import time
 import random
 from playsound import playsound
 import serial.tools.list_ports
+class CommonHelper:
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def readQss(style):
+        with open(style, 'r') as f:
+            return f.read()
 
 def vector_2d_angle(v1, v2):
     '''
@@ -90,22 +98,22 @@ def hex_ten(str):
     elif str == 'f':
         return 15
 
-def cmp(ctx):
-    if (stats.act == 1): # 石头
+def cmp(act, ctx):
+    if (act == 1): # 石头
         if (ctx == "拳头"):
             return 0
         if (ctx == "二|剪刀"):
             return -1
         if (ctx == "五|布"):
             return 1
-    elif (stats.act == 2): # 剪刀
+    elif (act == 2): # 剪刀
         if (ctx == "拳头"):
             return 1
         if (ctx == "二|剪刀"):
             return 0
         if (ctx == "五|布"):
             return -1
-    elif (stats.act == 3): # 布
+    elif (act == 3): # 布
         if (ctx == "拳头"):
             return -1
         if (ctx == "二|剪刀"):
@@ -224,7 +232,7 @@ def detect():
                             output.send_cmd(stats.com, output.protoco(act="run",idx=5))
 
                     elif stats.dtime == 1:
-                        idx = cmp(gesture_str) # 判断猜拳结果
+                        idx = cmp(stats.act, gesture_str) # 判断猜拳结果
                         # print("act = ", stats.act, "gets = ", gesture_str, "result :",idx)
                         if (idx != None):
                             if (idx > 0):
@@ -264,10 +272,11 @@ def detect():
             break
     cap.release()
 
-class Stats:
-    cam_status = 0  # 摄像头模式开关
+class Stats(QMainWindow):
     working_mode = 0 # 设备运行模式 0为清空,1为数字手势,2为手部跟随,3为划拳,4为动作录制
+    cam_status = 0  # 摄像头模式开关
     hand_enable = 0 # 手部功能总开关
+    recordmode = 0 # 录制模式开关
     dtime = 0 # 猜拳模式计时器
     denable = 0 # 猜拳模式开关 按下后打开     
     act = 0 # 猜拳准备出的手势
@@ -299,6 +308,14 @@ class Stats:
         self.ui.onemoreThing.clicked.connect(self.onemore_Thing)
         # 把[onemoreThing]这个按钮的点击连接到onemore_Thing函数
 
+        self.ui.recordmodeChoice.clicked.connect(self.recordmode_Choice)
+        # 把[recordmodeChoice]这个按钮的点击连接到recordmode_Choice函数
+
+        self.ui.recordStart.clicked.connect(self.record_start)
+        # 把[recordStart]这个按钮的点击连接到record_start函数
+    
+        self.ui.recordEnd.clicked.connect(self.record_end)
+        # 把[recordEnd]这个按钮的点击连接到record_end函数
 
         # ---------------------以下为五指选择框模块定义------------------------- #
         self.ui.xiaozhiCheck.clicked.connect(self.xiaozhi_Check)
@@ -438,6 +455,12 @@ class Stats:
     # --------------------以上为手指调节功能逻辑------------------ #
 
 
+    def record_start(self):
+        self.recordmode = ~self.recordmode
+
+    def record_end(self):
+        self.recordmode = ~self.recordmode
+
     def gesture_Text(self, shuruTXT):
         if (shuruTXT):
             self.ui.gestureText.setText(shuruTXT)
@@ -461,8 +484,8 @@ class Stats:
         arr_green = '''color: black; background-color: rgb(152, 251, 152)'''
         # 连接机械手掌
         if (Stats.hand_enable):
-            self.com = output.init(port, baut)
-            if (self.com == -1):
+            Stats.com = output.init(port, baut)
+            if (Stats.com == -1):
                 print("Failed to Open Com port")
                 Stats.hand_enable = ~Stats.hand_enable
                 self.ui.xiaozhiState.setStyleSheet(arr_red)
@@ -496,6 +519,10 @@ class Stats:
         self.working_mode = 3
         self.denable = ~self.denable
 
+    def recordmode_Choice(self):
+        # 进入手势跟随模式
+        self.working_mode = 4
+    
     def onemore_Thing(self):
         # 清空所有模式
         print("清空所有模式")
@@ -584,7 +611,10 @@ if __name__ == '__main__':
     mp_drawing_styles = mp.solutions.drawing_styles
     Window_text = '单击以开始屏幕显示'
     uipath = "src/sysui.ui"
+    styleFile = 'src/white.qss'
     app = QApplication([])          # QApplication 提供了整个图形界面程序的底层管理功能
     stats = Stats()                 # 调用Stats这个类
+    stats.ui.setStyleSheet(qssStyle)
+    qssStyle = CommonHelper.readQss(styleFile)
     stats.ui.show()                 # 放在主窗口的控件，要能全部显示show在界面上
     app.exec_()                     # 进入QApplication的事件处理循环
