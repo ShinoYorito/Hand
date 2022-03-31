@@ -8,7 +8,8 @@ from PySide2.QtGui import *
 import cv2
 import numpy as np
 import time
-
+import random
+from playsound import playsound
 
 def vector_2d_angle(v1, v2):
     '''
@@ -87,6 +88,29 @@ def hex_ten(str):
         return 14
     elif str == 'f':
         return 15
+
+def cmp(ctx):
+    if (stats.act == 1): # 石头
+        if (ctx == "拳头"):
+            return 0
+        if (ctx == "二|剪刀"):
+            return -1
+        if (ctx == "五|布"):
+            return 1
+    elif (stats.act == 2): # 剪刀
+        if (ctx == "拳头"):
+            return 1
+        if (ctx == "二|剪刀"):
+            return 0
+        if (ctx == "五|布"):
+            return -1
+    elif (stats.act == 3): # 布
+        if (ctx == "拳头"):
+            return -1
+        if (ctx == "二|剪刀"):
+            return 1
+        if (ctx == "五|布"):
+            return 0
 
 def timer():
     while(stats.dtime):
@@ -181,13 +205,30 @@ def detect():
         if (stats.working_mode == 3):# 猜拳模式
             if (stats.denable):
                 if (stats.dtime):
-                    if stats.dtime == 1:
+                    if stats.dtime == 2:
                         cv2.putText(frame, 'start!', (30, 350), 0, 7, (255, 255, 0), 15)
+                        if (stats.act == 1): # 石头
+                            output.send_cmd(stats.com, output.protoco(act="run",idx=0))
+                        elif (stats.act == 2): # 剪刀
+                            output.send_cmd(stats.com, output.protoco(act="run",idx=2))
+                        elif (stats.act == 3): # 布
+                            output.send_cmd(stats.com, output.protoco(act="run",idx=5))
+                    elif stats.dtime == 1:
+                        idx = cmp(gesture_str)
+                        print("act = ", stats.act, "gets = ", gesture_str, "result :",idx)
+                        if (idx > 0):
+                            playsound("src/win.mp3")
+                        elif (idx < 0):
+                            playsound("src/lose.mp3")
+                        elif (idx == 0):
+                            playsound("src/draw.mp3")
                     else:
-                        cv2.putText(frame, str(stats.dtime-1), (130, 410), 0,15, (255, 255, 0), 15)
+                        cv2.putText(frame, str(stats.dtime-2), (130, 410), 0,15, (255, 255, 0), 15)
                 else:
                     print("Enterd Gamble Mode")
-                    stats.dtime = 4 # sec
+                    output.send_cmd(stats.com, output.protoco(act="run",idx=0))
+                    stats.dtime = 5 # sec
+                    stats.act = random.randint(1,3)
                     gbl = threading.Thread(target=timer)
                     gbl.start()
         show = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -204,6 +245,8 @@ class Stats:
     hand_enable = 0 # 手部功能总开关
     dtime = 0 # 猜拳模式计时器
     denable = 0 # 猜拳模式开关 按下后打开     
+    act = 0 # 猜拳准备出的手势
+    spken = 0 # 猜拳模式 语音播报开关
     com = None
     def __init__(self):
         # 从文件中加载UI定义
@@ -427,7 +470,8 @@ class Stats:
         # 划拳模式打开语音播报
         if self.ui.gamblemodeChoice.isChecked() == True:
             self.ui.youwinBox.setEnabled(self.ui.gamblemodeChoice.isChecked())
-        # 语音播报的选择状态跟随划拳按钮
+            # 语音播报的选择状态跟随划拳按钮
+            self.spken = ~self.spken
         else:
             print("没有进入划拳模式")
             self.ui.youwinBox.setEnabled(0)  # 不能按
