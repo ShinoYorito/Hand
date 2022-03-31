@@ -346,7 +346,7 @@ class Stats:
         if (Frame != None):
             self.ui.camWindow.setPixmap(QPixmap.fromImage(Frame))
 
-    def handconnect_Button(self, port = 'COM4', baut = 9600):
+    def handconnect_Button(self, port = 'COM16', baut = 9600):
         Stats.hand_enable = ~Stats.hand_enable
         arr_red = '''color: black; background-color: rgb(240, 128, 128)'''
         arr_green = '''color: black; background-color: rgb(152, 251, 152)'''
@@ -413,59 +413,69 @@ class Stats:
     def num0_Button(self):
         if self.ui.numbermodeChoice.isChecked() == True:
             print("数字手势:0")
+            output.send_cmd(self.com, output.protoco(act="run", idx=0))
         else:
             print("数字0按了没用")
 
     def num1_Button(self):
         if self.ui.numbermodeChoice.isChecked() == True:
             print("数字手势:1")
+            output.send_cmd(self.com, output.protoco(act="run", idx=1))
         else:
             print("数字1按了没用")
 
     def num2_Button(self):
         if self.ui.numbermodeChoice.isChecked() == True:
             print("数字手势:2")
+            output.send_cmd(self.com, output.protoco(act="run", idx=2))
         else:
             print("数字2按了没用")
 
     def num3_Button(self):
         if self.ui.numbermodeChoice.isChecked() == True:
             print("数字手势:3")
+            output.send_cmd(self.com, output.protoco(act="run", idx=3))
         else:
             print("数字3按了没用")
 
     def num4_Button(self):
         if self.ui.numbermodeChoice.isChecked() == True:
+            output.send_cmd(self.com, output.protoco(act="run", idx=4))
             print("数字手势:4")
         else:
             print("数字4按了没用")
 
     def num5_Button(self):
         if self.ui.numbermodeChoice.isChecked() == True:
+            output.send_cmd(self.com, output.protoco(act="run", idx=5))
             print("数字手势:5")
         else:
             print("数字5按了没用")
 
     def num6_Button(self):
         if self.ui.numbermodeChoice.isChecked() == True:
+            output.send_cmd(self.com, output.protoco(act="run", idx=6))
             print("数字手势:6")
         else:
             print("数字6按了没用")
 
     def num7_Button(self):
         if self.ui.numbermodeChoice.isChecked() == True:
+            output.send_cmd(self.com, output.protoco(act="run", idx=7))
             print("数字手势:7")
         else:
             print("数字7按了没用")
 
     def num8_Button(self):
         if self.ui.numbermodeChoice.isChecked() == True:
+            output.send_cmd(self.com, output.protoco(act="run", idx=8))
             print("数字手势:8")
         else:
             print("数字8按了没用")
 
     def num9_Button(self):
         if self.ui.numbermodeChoice.isChecked() == True:
+            output.send_cmd(self.com, output.protoco(act="run", idx=9))
             print("数字手势:9")
         else:
             print("数字9按了没用")
@@ -475,7 +485,7 @@ class Stats:
 if __name__ == '__main__':
     mp_drawing_styles = mp.solutions.drawing_styles
     Window_text = '单击以开始屏幕显示'
-    uipath = "src\sysui.ui"
+    uipath = "sysui.ui"
     app = QApplication([])          # QApplication 提供了整个图形界面程序的底层管理功能
     stats = Stats()                 # 调用Stats这个类
     stats.ui.show()                 # 放在主窗口的控件，要能全部显示show在界面上
