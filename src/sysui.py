@@ -181,10 +181,13 @@ def detect():
         if (stats.working_mode == 3):# 猜拳模式
             if (stats.denable):
                 if (stats.dtime):
-                    cv2.putText(frame, str(stats.dtime), (0, 100), 0, 1.3, (0, 0, 255), 3)
+                    if stats.dtime == 1:
+                        cv2.putText(frame, 'start!', (30, 350), 0, 7, (255, 255, 0), 15)
+                    else:
+                        cv2.putText(frame, str(stats.dtime-1), (130, 410), 0,15, (255, 255, 0), 15)
                 else:
                     print("Enterd Gamble Mode")
-                    stats.dtime = 3 # sec
+                    stats.dtime = 4 # sec
                     gbl = threading.Thread(target=timer)
                     gbl.start()
         show = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -209,6 +212,7 @@ class Stats:
         # 比如 self.ui.button , self.ui.textEdit
         self.ui = QUiLoader().load(uipath)
         # 动态加载整个ui
+        self.check_state = []
 
         self.ui.camButton.clicked.connect(self.cam_Button)
         # 把[camButton]这个按钮的点击连接到cam_Button函数
@@ -270,62 +274,92 @@ class Stats:
 
 #------------------------------下面是函数----------------------------------#
 
-    # --------------------以下为手指选择功能逻辑------------------ #
+# --------------------以下为手指选择功能逻辑------------------ #
     def xiaozhi_Check(self):
-        if self.ui.xiaozhiCheck.isChecked() == True:
-            print("小指选中了")
-        else:
-            print("小指取消选中了")
+        try:
+            if self.ui.xiaozhiCheck.isChecked() == True:
+                self.check_state.append(self.ui.xiaozhiSlider)
+            else:
+                self.check_state.remove(self.ui.xiaozhiSlider)
+        except:
+            pass
 
     def wumingzhi_Check(self):
-        if self.ui.wumingzhiCheck.isChecked() == True:
-            print("无名指选中了")
-        else:
-            print("无名指取消选中了")
+        try:
+            if self.ui.wumingzhiCheck.isChecked() == True:
+                self.check_state.append(self.ui.wumingzhiSlider)
+            else:
+                self.check_state.remove(self.ui.wumingzhiSlider)
+        except:
+            pass
 
     def zhongzhi_Check(self):
-        if self.ui.zhongzhiCheck.isChecked() == True:
-            print("中指选中了")
-        else:
-            print("中指取消选中了")
+        try:
+            if self.ui.zhongzhiCheck.isChecked() == True:
+                self.check_state.append(self.ui.zhongzhiSlider)
+            else:
+                self.check_state.remove(self.ui.zhongzhiSlider)
+        except:
+            pass
 
     def shizhi_Check(self):
-        if self.ui.shizhiCheck.isChecked() == True:
-            print("食指选中了")
-        else:
-            print("食指取消选中了")
+        try:
+            if self.ui.shizhiCheck.isChecked() == True:
+                self.check_state.append(self.ui.shizhiSlider)
+            else:
+                self.check_state.remove(self.ui.shizhiSlider)
+        except:
+            pass
 
     def muzhi_Check(self):
-        if self.ui.muzhiCheck.isChecked() == True:
-            print("拇指选中了")
-        else:
-            print("拇指取消选中了")
+        try:
+            if self.ui.muzhiCheck.isChecked() == True:
+                self.check_state.append(self.ui.muzhiSlider)
+            else:
+                self.check_state.remove(self.ui.muzhiSlider)
+        except:
+            pass
     # --------------------以上为手指选择功能逻辑------------------ #
 
 
     # --------------------以下为手指调节功能逻辑------------------ #
     def xiaozhi_Tiaojie(self):
         xiaozhi_jiaodu = self.ui.xiaozhiSlider.value()
+        if self.ui.xiaozhiSlider in self.check_state:
+            for i in self.check_state:
+                i.setValue(xiaozhi_jiaodu)
         arg = 900 + (xiaozhi_jiaodu * 11) # 将获取到的整形百分比 转为900~2000的有效值
         output.send_cmd(self.com, output.protoco(ctx = {5:arg}))
 
     def wumingzhi_Tiaojie(self):
         wumingzhi_jiaodu = self.ui.wumingzhiSlider.value()
+        if self.ui.wumingzhiSlider in self.check_state:
+            for i in self.check_state:
+                i.setValue(wumingzhi_jiaodu)
         arg = 900 + (wumingzhi_jiaodu * 11) # 将获取到的整形百分比 转为900~2000的有效值
         output.send_cmd(self.com, output.protoco(ctx = {4:arg}))
 
     def zhongzhi_Tiaojie(self):
         zhongzhi_jiaodu = self.ui.zhongzhiSlider.value()
+        if self.ui.zhongzhiSlider in self.check_state:
+            for i in self.check_state:
+                i.setValue(zhongzhi_jiaodu)
         arg = 900 + (zhongzhi_jiaodu * 11) # 将获取到的整形百分比 转为900~2000的有效值
         output.send_cmd(self.com, output.protoco(ctx = {3:arg}))
 
     def shizhi_Tiaojie(self):
         shizhi_jiaodu = self.ui.shizhiSlider.value()
+        if self.ui.shizhiSlider in self.check_state:
+            for i in self.check_state:
+                i.setValue(shizhi_jiaodu)
         arg = 900 + (shizhi_jiaodu * 11) # 将获取到的整形百分比 转为900~2000的有效值
         output.send_cmd(self.com, output.protoco(ctx = {2:arg}))
 
     def muzhi_Tiaojie(self):
         muzhi_jiaodu = self.ui.muzhiSlider.value()
+        if self.ui.muzhiSlider in self.check_state:
+            for i in self.check_state:
+                i.setValue(muzhi_jiaodu)
         arg = 2000 - (muzhi_jiaodu * 11) # 将获取到的整形百分比 转为900~2000的有效值 注意大拇指运作方向与其他四指相反
         output.send_cmd(self.com, output.protoco(ctx = {1:arg}))
     # --------------------以上为手指调节功能逻辑------------------ #
@@ -346,7 +380,7 @@ class Stats:
         if (Frame != None):
             self.ui.camWindow.setPixmap(QPixmap.fromImage(Frame))
 
-    def handconnect_Button(self, port = 'COM16', baut = 9600):
+    def handconnect_Button(self, port = 'COM6', baut = 9600):
         Stats.hand_enable = ~Stats.hand_enable
         arr_red = '''color: black; background-color: rgb(240, 128, 128)'''
         arr_green = '''color: black; background-color: rgb(152, 251, 152)'''
@@ -485,7 +519,7 @@ class Stats:
 if __name__ == '__main__':
     mp_drawing_styles = mp.solutions.drawing_styles
     Window_text = '单击以开始屏幕显示'
-    uipath = "sysui.ui"
+    uipath = "src/sysui.ui"
     app = QApplication([])          # QApplication 提供了整个图形界面程序的底层管理功能
     stats = Stats()                 # 调用Stats这个类
     stats.ui.show()                 # 放在主窗口的控件，要能全部显示show在界面上
