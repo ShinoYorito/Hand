@@ -11,6 +11,8 @@ import time
 import random
 from playsound import playsound
 import serial.tools.list_ports
+import matplotlib.pyplot as plt
+import numpy
 class CommonHelper:
     def __init__(self):
         pass
@@ -129,6 +131,31 @@ def timer():
         stats.dtime = stats.dtime - 1
     stats.denable = ~stats.denable
 
+def inbuffer(angle_input, buffer, buffersize = 5):
+    angle_output = [] # 构建一个输出Angle
+
+    # 将输入的五个指头分别存入各自的buffer
+    buffer = buffer.tolist() # 转为List便于操作
+    buffer.pop() # Pop出最先放入的Angle
+    buffer.insert(0, angle_input) # Push 入一个angle
+    buffer = numpy.array(buffer)# 转回array
+
+    # 进行Angle 均值计算
+    buffer = numpy.rot90(buffer,3) # 进行3次90度旋转(270度) 用于计算逐个指头的角度
+    for i in buffer:
+        angle_output.append(numpy.mean(i))
+    buffer= numpy.rot90(buffer) # 再进行1次90度旋转以复原矩阵
+
+    return angle_output, buffer
+
+def replay_hand():
+    print("Replaying")
+    a = 0
+    while (a <= 100):
+        stats.replay_Disp(a) # 进度条增长
+        a = a + 1
+    return 0
+
 def count():
     playsound("src/cntdwn.mp3")
     
@@ -196,6 +223,8 @@ def detect():
         min_tracking_confidence=0.75)
     cap = cv2.VideoCapture(0)
     gesture_str = '未定义的手势'
+    buffersize = 5    # 生成一个Buffersize行,5列的数组
+    buffer = numpy.ones((buffersize, 5))
     while True:
         ret, frame = cap.read()
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -214,7 +243,9 @@ def detect():
                     y = hand_landmarks.landmark[i].y * frame.shape[0]
                     hand_local.append((x, y))
                 if hand_local:
-                    angle_list = hand_angle(hand_local)
+                    angle_list = hand_angle(hand_local) # 获取到计算出的角度原数据
+                    angle_list,buffer = inbuffer(angle_list, buffer, buffersize) # 降噪
+                    # print(angle_list)
                     gesture_str = h_gesture(angle_list)
         if (stats.working_mode == 3):# 猜拳模式
             if (stats.denable):
@@ -281,6 +312,7 @@ class Stats(QMainWindow):
     denable = 0 # 猜拳模式开关 按下后打开     
     act = 0 # 猜拳准备出的手势
     com = None
+    
     def __init__(self):
         # 从文件中加载UI定义
         # 从 UI 定义中动态 创建一个相应的窗口对象
@@ -317,6 +349,9 @@ class Stats(QMainWindow):
         self.ui.recordEnd.clicked.connect(self.record_end)
         # 把[recordEnd]这个按钮的点击连接到record_end函数
 
+        self.ui.recordPlay.clicked.connect(self.record_play)
+        # 把[recordPlay]这个按钮的点击连接到record_play函数
+    
         # ---------------------以下为五指选择框模块定义------------------------- #
         self.ui.xiaozhiCheck.clicked.connect(self.xiaozhi_Check)
         self.ui.wumingzhiCheck.clicked.connect(self.wumingzhi_Check)
@@ -456,10 +491,41 @@ class Stats(QMainWindow):
 
 
     def record_start(self):
-        self.recordmode = ~self.recordmode
+        if self.ui.recordmodeChoice.isChecked() == True:
+            self.recordmode = ~self.recordmode
+            self.ui.recordStart.setEnabled(False)
+            self.ui.recordEnd.setEnabled(True)
+            self.ui.progressBar.setValue(0)
+        else:
+            print("未进入动作录制模式")
 
     def record_end(self):
-        self.recordmode = ~self.recordmode
+        if self.ui.recordmodeChoice.isChecked() == True:
+            self.recordmode = ~self.recordmode
+            self.ui.recordStart.setEnabled(True)
+            self.ui.recordEnd.setEnabled(False)
+            self.ui.progressBar.setValue(100)
+        else:
+            print("未进入动作录制模式")
+
+
+    def record_play(self):
+        if self.ui.recordmodeChoice.isChecked() == True:
+            self.ui.recordStart.setEnabled(False)
+            self.ui.recordEnd.setEnabled(False)
+            self.ui.progressBar.setValue(0)
+            # 开始回放动作
+
+            replay_hand()
+
+            # 结束回放后启用录制按键
+            if self.ui.progressBar.value() == 100:
+                self.ui.recordStart.setEnabled(True)
+                self.ui.recordEnd.setEnabled(True)
+            else:
+                print("未结束动作回放模式")
+        else:
+            print("未进入动作录制模式")
 
     def gesture_Text(self, shuruTXT):
         if (shuruTXT):
@@ -475,6 +541,10 @@ class Stats(QMainWindow):
     def cam_Disp(self, Frame = None):
         if (Frame != None):
             self.ui.camWindow.setPixmap(QPixmap.fromImage(Frame))
+    
+    def replay_Disp(self, progress = 0):
+        if (progress != 0):
+            self.ui.progressBar.setValue(progress)
 
     def handconnect_Button(self):
         port = self.ui.comboBox.currentText()
@@ -520,8 +590,9 @@ class Stats(QMainWindow):
         self.denable = ~self.denable
 
     def recordmode_Choice(self):
-        # 进入手势跟随模式
+        # 进入录制模式
         self.working_mode = 4
+        
     
     def onemore_Thing(self):
         # 清空所有模式

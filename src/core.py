@@ -4,9 +4,10 @@ import math
 import serial
 import copy
 import output
-
+import matplotlib.pyplot as plt
+import numpy
 mp_drawing_styles = mp.solutions.drawing_styles
-com = output.init('COM2', 9600)
+com = output.init('COM4', 9600)
 def vector_2d_angle(v1, v2):
     '''
         求解二维向量的角度
@@ -139,6 +140,34 @@ def h_gesture(angle_list):
     return gesture_str
 
 
+def inbuffer(angle_input, buffer, buffersize = 5):
+    print("Buffer in\n", buffer)
+    print("-------------------------------", angle_input)
+    angle_output = [] # 构建一个输出Angle
+
+    # 将输入的五个指头分别存入各自的buffer
+    buffer = buffer.tolist() # 转为List便于操作
+    buffer.pop() # Pop出最先放入的Angle
+    buffer.insert(0, angle_input) # Push 入一个angle
+    buffer = numpy.array(buffer)# 转回array
+
+    # 进行Angle 均值计算
+    buffer = numpy.rot90(buffer,3) # 旋转90度用于计算逐个指头的角度
+    for i in buffer:
+        print("Buffer: ", i)
+        print("Mean: ", numpy.mean(i))
+        angle_output.append(numpy.mean(i))
+    buffer= numpy.rot90(buffer) # 进行3次旋转以复原矩阵
+    
+    print("++++++++++++++++++++++++++++++++", angle_output)
+    return angle_output, buffer
+
+
+def moving_average(interval, windowsize):
+    window = numpy.ones(int(windowsize)) / float(windowsize)
+    re = numpy.convolve(interval, window, 'same')
+    return re
+
 def detect():
     mp_drawing = mp.solutions.drawing_utils
     mp_hands = mp.solutions.hands
@@ -148,6 +177,8 @@ def detect():
         min_detection_confidence=0.75,
         min_tracking_confidence=0.75)
     cap = cv2.VideoCapture(0)
+    buffersize = 5    # 生成一个Buffersize行,5列的数组
+    buffer = numpy.ones((buffersize, 5))
     while True:
         ret, frame = cap.read()
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -167,13 +198,44 @@ def detect():
                     hand_local.append((x, y))
                 if hand_local:
                     angle_list = hand_angle(hand_local)
-                    gesture_str = h_gesture(angle_list)
+
+                    before.append(angle_list[0])   # 原始数据存进before
+                    x_raw.append(len(before))      # plt的x轴
+
+                    angle_list1 = moving_average(angle_list, 10)
+                    angle_list2,buffer = inbuffer(angle_list, buffer, buffersize)
+
+                    after.append(angle_list1[0])    # 处理后的数据存进after
+                    after2.append(angle_list2[0])    # 处理后的数据存进after
+                    
+
+                    gesture_str = h_gesture(angle_list2)
                     cv2.putText(frame, gesture_str, (0, 100), 0, 1.3, (0, 0, 255), 3)
         cv2.imshow('MediaPipe Hands', frame)
         if cv2.waitKey(1) & 0xFF == 27:
             break
     cap.release()
 
+    plt.title("Fingers",fontsize = 24)
+    plt.xlabel("time",fontsize = 14)
+    plt.ylabel("Args",fontsize = 14)
+
+    plt.plot(x_raw,before,linewidth=1,label='before')
+    plt.plot(x_raw,after,linewidth=1,label='after')
+    plt.plot(x_raw,after2,linewidth=1,label='after2')
+    plt.legend()
+
+    tick = numpy.arange(stop=len(x_raw),step=10)
+    plt.xticks(tick)
+    plt.tick_params(axis='both',labelsize = 14)
+    plt.show()
+    
+
 
 if __name__ == '__main__':
+    
+    before = []
+    after = []
+    after2 = []
+    x_raw = []
     detect()
