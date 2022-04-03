@@ -614,7 +614,7 @@ if __name__ == '__main__':
     styleFile = 'src/white.qss'
     app = QApplication([])          # QApplication 提供了整个图形界面程序的底层管理功能
     stats = Stats()                 # 调用Stats这个类
-    stats.ui.setStyleSheet(qssStyle)
     qssStyle = CommonHelper.readQss(styleFile)
+    stats.ui.setStyleSheet(qssStyle)
     stats.ui.show()                 # 放在主窗口的控件，要能全部显示show在界面上
     app.exec_()                     # 进入QApplication的事件处理循环
